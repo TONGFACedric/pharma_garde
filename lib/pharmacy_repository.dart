@@ -111,9 +111,8 @@ class PharmacyRepository {
       try {
         final decodedData = json.decode(cachedData);
         if (decodedData is List) {
-          final loadedPharmacies = decodedData
-              .map((item) => Pharmacy.fromJson(item))
-              .toList();
+          final loadedPharmacies =
+              decodedData.map((item) => Pharmacy.fromJson(item)).toList();
           _pharmacyCache.putIfAbsent(region, () => {})[town] = loadedPharmacies;
           _pharmacyLastFetchTimes.putIfAbsent(region, () => {})[town] =
               DateTime.fromMillisecondsSinceEpoch(lastFetchMillis);
@@ -151,9 +150,8 @@ class PharmacyRepository {
         try {
           final decodedData = json.decode(cachedData);
           if (decodedData is List) {
-            final loadedPharmacies = decodedData
-                .map((item) => Pharmacy.fromJson(item))
-                .toList();
+            final loadedPharmacies =
+                decodedData.map((item) => Pharmacy.fromJson(item)).toList();
             // Update in-memory so UI can use it immediately
             _pharmacyCache.putIfAbsent(region, () => {})[town] =
                 loadedPharmacies;
@@ -204,8 +202,8 @@ class PharmacyRepository {
   }
 
   bool _isCacheExpired(DateTime lastFetchTime) {
-    // Increased to 18 hours. If fetched at 2 PM, it remains valid until 8 AM next day.
-    return DateTime.now().difference(lastFetchTime) > const Duration(hours: 18);
+    // Increased to 5 hours. If fetched at 2 PM, it remains valid until 7 PM the next day.
+    return DateTime.now().difference(lastFetchTime) > const Duration(hours: 5);
   }
 
   /// Forces a fetch from the network and updates the persistent cache.

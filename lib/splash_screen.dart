@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:pharmatest/github_service.dart';
 import 'package:pharmatest/home.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -45,6 +46,11 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
+    // Check for updates after the first frame is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForUpdates();
+    });
+
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         Navigator.of(context).pushReplacement(
@@ -56,8 +62,8 @@ class _SplashScreenState extends State<SplashScreen>
             ),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
+              return FadeTransition(opacity: animation, child: child);
+            },
             transitionDuration: const Duration(milliseconds: 800),
           ),
         );
@@ -69,6 +75,11 @@ class _SplashScreenState extends State<SplashScreen>
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  void _checkForUpdates() {
+    final githubService = GitHubService();
+    githubService.checkForUpdatesAndNotify(context);
   }
 
   @override

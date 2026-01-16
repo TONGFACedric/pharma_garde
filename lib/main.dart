@@ -6,11 +6,12 @@ import 'package:workmanager/workmanager.dart';
 import 'package:pharmatest/pharmacy_repository.dart';
 
 const String fetchTaskName = "fetchPharmaciesTask";
+const String retryTaskName = "retryFetchPharmaciesTask";
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
-    if (task == fetchTaskName) {
+    if (task == fetchTaskName || task == retryTaskName) {
       try {
         WidgetsFlutterBinding.ensureInitialized();
         final prefs = await SharedPreferences.getInstance();
@@ -28,10 +29,24 @@ void callbackDispatcher() {
         }
       } catch (e) {
         debugPrint("Background fetch error: $e");
+
+        // For retry tasks, don't schedule another retry to avoid infinite loops
+        if (task == fetchTaskName) {
+          // Get current retry count from inputData or default to 0
+          final retryCount = (inputData?['retryCount'] as int?) ?? 0;
+
+          // Only schedule retry if we haven't exceeded max retries (e.g., 3 retries)
+          if (retryCount < 3) {
+            _scheduleRetryFetch(retryCount + 1);
+          }
+        }
+
         return Future.value(false);
       } finally {
-        // Schedule the next run (Chain reaction)
-        _scheduleNextFetch();
+        // Only schedule next regular fetch if this was a regular fetch task
+        if (task == fetchTaskName) {
+          _scheduleNextFetch();
+        }
       }
     }
     return Future.value(true);
@@ -42,7 +57,7 @@ void _scheduleNextFetch() {
   final now = DateTime.now();
   // Targets: Today 9am, Today 6pm, Tomorrow 9am
   final targets = [
-    DateTime(now.year, now.month, now.day, 9, 0), // 9:00 AM
+    DateTime(now.year, now.month, now.day, 7, 0), // 7:00 AM
     DateTime(now.year, now.month, now.day, 18, 0), // 6:00 PM
     DateTime(now.year, now.month, now.day + 1, 9, 0), // Tomorrow 9:00 AM
   ];
@@ -61,6 +76,19 @@ void _scheduleNextFetch() {
   debugPrint(
     "Next background fetch scheduled in ${delay.inHours} hours and ${delay.inMinutes % 60} minutes",
   );
+}
+
+void _scheduleRetryFetch(int retryCount) {
+  final delay = Duration(minutes: 15); // Retry every 15 minutes
+
+  Workmanager().registerOneOffTask(
+    "retry_fetch_task_$retryCount",
+    retryTaskName,
+    initialDelay: delay,
+    existingWorkPolicy: ExistingWorkPolicy.replace,
+    constraints: Constraints(networkType: NetworkType.connected),
+  );
+  debugPrint("Retry $retryCount scheduled in 15 minutes");
 }
 
 void main() async {
